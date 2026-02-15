@@ -9,6 +9,7 @@ from app.models.user import User
 from app.core.auth import get_current_org, get_current_user
 from openclaw_mc_shared.schemas.tasks import TaskRead, TaskCreate, TaskUpdate
 import uuid
+from app.core.events import broadcast_event
 
 router = APIRouter()
 
@@ -37,6 +38,22 @@ async def create_task(
     session.add(task)
     await session.commit()
     await session.refresh(task)
+
+    # Broadcast Event
+    await broadcast_event(
+        session=session,
+        org_id=org.id,
+        event_type="task.created",
+        payload={
+            "id": str(task.id),
+            "title": task.title,
+            "status": task.status,
+            "priority": task.priority
+        },
+        actor_id=user.id,
+        actor_type="human"
+    )
+
     return task
 
 @router.get("/{task_id}", response_model=TaskRead)
@@ -63,6 +80,7 @@ async def update_task(
     if not task or task.org_id != org.id:
         raise HTTPException(status_code=404, detail="Task not found")
         
+    old_status = task.status
     task_data = task_in.model_dump(exclude_unset=True)
     for key, value in task_data.items():
         setattr(task, key, value)
@@ -70,6 +88,26 @@ async def update_task(
     session.add(task)
     await session.commit()
     await session.refresh(task)
+
+    # Broadcast Event
+    event_type = "task.updated"
+    if "status" in task_data and old_status != task.status:
+        event_type = "task.transitioned"
+
+    await broadcast_event(
+        session=session,
+        org_id=org.id,
+        event_type=event_type,
+        payload={
+            "id": str(task.id),
+            "changes": task_data,
+            "old_status": old_status,
+            "new_status": task.status
+        },
+        actor_id=user.id,
+        actor_type="human"
+    )
+
     return task
 
 @router.delete("/{task_id}")

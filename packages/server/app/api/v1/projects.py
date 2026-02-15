@@ -9,6 +9,7 @@ from app.models.user import User
 from app.core.auth import get_current_org, get_current_user
 from openclaw_mc_shared.schemas.projects import ProjectRead, ProjectCreate, ProjectUpdate
 import uuid
+from app.core.events import broadcast_event
 
 router = APIRouter()
 
@@ -29,9 +30,9 @@ async def list_projects(
 @router.post("/", response_model=ProjectRead)
 async def create_project(
     project_in: ProjectCreate,
+    session: AsyncSession = Depends(get_session),
     org: Organization = Depends(get_current_org),
-    user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_session)
+    user: User = Depends(get_current_user)
 ):
     project = Project(**project_in.model_dump(), org_id=org.id)
     if not project.owner_id:
@@ -40,6 +41,22 @@ async def create_project(
     session.add(project)
     await session.commit()
     await session.refresh(project)
+
+    # Broadcast Event
+    await broadcast_event(
+        session=session,
+        org_id=org.id,
+        event_type="project.created",
+        payload={
+            "id": str(project.id),
+            "name": project.name,
+            "description": project.description,
+            "owner_id": str(project.owner_id) if project.owner_id else None
+        },
+        actor_id=user.id,
+        actor_type="human"
+    )
+
     return project
 
 @router.get("/{project_id}", response_model=ProjectRead)
@@ -73,6 +90,20 @@ async def update_project(
     session.add(project)
     await session.commit()
     await session.refresh(project)
+
+    # Broadcast Event
+    await broadcast_event(
+        session=session,
+        org_id=org.id,
+        event_type="project.updated",
+        payload={
+            "id": str(project.id),
+            "changes": project_data, # Only send changed fields
+        },
+        actor_id=user.id,
+        actor_type="human"
+    )
+
     return project
 
 @router.delete("/{project_id}")
