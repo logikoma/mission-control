@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "skills": {
+    "cost-report": {
+      "version": "1.0.2",
+      "installedAt": 1770524283764
+    },
+    "google-docs": {
+      "version": "1.0.5",
+      "installedAt": 1771019592925
+    }
+  }
+}
