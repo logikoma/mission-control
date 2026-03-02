@@ -8,3 +8,4 @@ from .assignments import TaskProjectAssignment, ProjectUserAssignment
 from .event import Event
 from .channel import Channel
 from .message import Message
+from .sub_agent import SubAgent

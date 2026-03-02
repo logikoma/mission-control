@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from . import projects, tasks, events, channels, search, analytics, reports
+from . import projects, tasks, events, channels, search, analytics, reports, sub_agents
 
 api_router = APIRouter()
 api_router.include_router(projects.router, prefix="/orgs/{org_slug}/projects", tags=["Projects"])
@@ -9,3 +9,4 @@ api_router.include_router(channels.router, prefix="/orgs/{org_slug}/channels", t
 api_router.include_router(search.router, prefix="/orgs/{org_slug}/search", tags=["Search"])
 api_router.include_router(analytics.router, prefix="/orgs/{org_slug}/analytics", tags=["Analytics"])
 api_router.include_router(reports.router, prefix="/orgs/{org_slug}/reports", tags=["Reports"])
+api_router.include_router(sub_agents.router, prefix="/orgs/{org_slug}/sub-agents", tags=["Sub-Agents"])
